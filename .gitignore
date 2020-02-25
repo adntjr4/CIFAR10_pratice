@@ -1,3 +1,6 @@
+# ignore pycache files
+__pycache__/*
+
 # ignore data files
 data/*
 temp/*
@@ -5,4 +8,11 @@ source/__pycache__/*
 
 # ignore virtualenv file
 venv/*
+
+# ignore trained model file
+model/*
+
+# accept well trained one for exception
+#!model/name
+
 
