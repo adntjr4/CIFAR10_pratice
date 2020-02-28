@@ -13,53 +13,10 @@ import numpy as np
 from util_fn import *
 
 '''
-CIFAR-10 데이터를 다루기 위한 pytorch 기본 예제
 기본 CNN파일을 변형하여 DenseNet 구성
 '''
 
-class DenseNet(nn.Module):
-    def __init__(self):
-        super(DenseNet, self).__init__()
-
-    def custom_training(self, device, trainloader, criterion, optimizer, total_epoch=1, print_batch=2000, start_time=time.time(), path="./", name='test'): 
-        progress_time = start_time
-        for epoch in range(total_epoch):   # 데이터셋을 수차례 반복합니다.
-            running_loss = 0.0
-            for i, data in enumerate(trainloader, 0):
-                # [inputs, labels]의 목록인 data로부터 입력을 받은 후;
-                inputs, labels = data[0].to(device), data[1].to(device)
-
-                # 변화도(Gradient) 매개변수를 0으로 만들고
-                optimizer.zero_grad()
-
-                # 순전파 + 역전파 + 최적화를 한 후
-                outputs = self(inputs)
-                loss = criterion(outputs, labels)
-                loss.backward()
-                optimizer.step()
-
-                # 통계를 출력합니다.
-                running_loss += loss.item()
-                if i % print_batch == print_batch-1:    # print every 2000 mini-batches
-                    print_mid_train_msg(epoch, i+1, running_loss/print_batch)
-                    running_loss = 0.0
-
-                if i % 50 == 0:
-                    if time.time()-progress_time > 1:
-                        progress_time = time.time()
-                        print_prog_msg(start_time, total_epoch, epoch, len(trainloader), i+1)
-                
-
-        print_finish_training_msg(start_time)
-        torch.save(self.state_dict(), path+'CNN'+'_'+name)
-
-    def get_response(self, device, data):
-        data.to(device)
-        outputs = self(data)
-        _, predicted = torch.max(outputs.data, 1)
-        return predicted
-
-class CNNNet_2layer(CNNNet):
+class CNNNet_2layer(CustomNet):
     '''
     5x5 filter(20ch) -> max_pool -> 3x3 filter(128ch) -> max_pool -> (128->128->64->10) FNN
     '''

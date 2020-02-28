@@ -15,4 +15,10 @@ model/*
 # accept well trained one for exception
 #!model/name
 
+# ignore log file
+logs/*
+
+# ignore temp file
+temp/*
+
 
