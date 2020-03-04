@@ -10,40 +10,135 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 import numpy as np
 
-from util_fn import *
-
 '''
-기본 CNN파일을 변형하여 DenseNet 구성
+DenseNet code 작성
 '''
 
-class CNNNet_2layer(CustomNet):
-    '''
-    5x5 filter(20ch) -> max_pool -> 3x3 filter(128ch) -> max_pool -> (128->128->64->10) FNN
-    '''
-    def __init__(self):
-        super(CNNNet_2layer, self).__init__()
-        self.conv1 = nn.Conv2d(3, 20, 5)
-        self.conv2 = nn.Conv2d(20, 128, 3)
-        self.dropout1 = nn.Dropout2d(0.25)
-        self.dropout2 = nn.Dropout2d(0.5)
-        self.fc1 = nn.Linear(128 * 6 * 6, 128)
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, 10)
+class DenseNet(nn.Module):
+    def __init__(self, growth_rate=12, layer_num=40, B_mode=False, C_mode=False, theta=0.5):
+        super(DenseNet, self).__init__()
+        self.k = growth_rate
+        self.L = layer_num
+        self.B_mode = B_mode
+        self.C_mode = C_mode
+        self.theta = theta
+
+        # dafault setting : 3 dense block
+        if (B_mode and (layer_num-4)%6 != 0) or ((not B_mode) and (layer_num-4)%3 != 0):
+            raise Exception('layer 개수가 안 나눠떨어짐.')
+
+        block_layer_num = (layer_num-4) // 6
+
+        self.init_conv = nn.Conv2d(3, 2*self.k, kernel_size=3, stride=1, padding=0)
+
+        block_in1 = 2*self.k
+        self.block1 = DenseBlock(block_in1, block_layer_num, self.k, B_mode=self.B_mode)
+        block_out2 = block_in1 + block_layer_num * self.k
+
+        self.transition1 = TransitionLayer(block_out2, C_mode=self.C_mode, theta=self.theta)
+
+        block_in = int(theta*block_out2) if C_mode else block_out2
+        self.block2 = DenseBlock(block_in, block_layer_num, self.k, B_mode=self.B_mode)
+        block_out = block_in + block_layer_num * self.k
+
+        self.transition2 = TransitionLayer(block_out, C_mode=self.C_mode, theta=self.theta)
+
+        block_in = int(theta*block_out) if C_mode else block_out
+        self.block3 = DenseBlock(block_in, block_layer_num, self.k, B_mode=self.B_mode)
+        block_out = block_in + block_layer_num * self.k
+
+        self.FNN = nn.Linear(block_out, 10)
 
     def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2)
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2)
-        x = self.dropout1(x)
-        
-        x = torch.flatten(x, 1)
-        x = F.relu(self.fc1(x))
-        x = self.dropout2(x)
-        x = F.relu(self.fc2(x))
-        output = F.log_softmax(self.fc3(x), dim=1)
+        conv_out = self.init_conv(x)
 
-        return output
+        block1_out = self.block1(conv_out)
+        transit1_out = self.transition1(block1_out)
+        block2_out = self.block2(transit1_out)
+        transit2_out = self.transition2(block2_out)
+        block3_out = self.block3(transit2_out)
+
+        avg_pooling_out = F.adaptive_avg_pool2d(block3_out, (1,1))
+        avg_pooling_out = avg_pooling_out.view(avg_pooling_out.size(0), -1)
+
+        out = self.FNN(avg_pooling_out)
+
+        return out
+
+class TransitionLayer(nn.Module):
+    def __init__(self, in_channels, C_mode=False, theta=0.5):
+        super(TransitionLayer, self).__init__()
+
+        out_channels = int(theta*in_channels) if C_mode else in_channels
+
+        self.bn = nn.BatchNorm2d(in_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
+        self.avg_pool = nn.AvgPool2d(kernel_size=2, stride=2, padding=0)
+
+    def forward(self, x):
+        out = self.bn(x)
+        out = self.relu(out)
+        out = self.conv1(out)
+        out = self.avg_pool(out)
+        return out
+
+class DenseBlock(nn.Sequential):
+    def __init__(self, in_channels, layer_num, k, B_mode):
+        super(DenseBlock, self).__init__()
+        self.layer_num = layer_num if B_mode else 2*layer_num
+
+        for i in range(layer_num):
+            in_t = in_channels + k*i
+            self.add_module('bottle_neck_%d'%i, BottleNeck(in_t, k, B_mode))
+
+class BottleNeck(nn.Module):
+    def __init__(self, in_channels, k, B_mode):
+        super(BottleNeck, self).__init__()
+        self.B_mode = B_mode
+
+        if not B_mode:
+            self.bn = nn.BatchNorm2d(in_channels)
+            self.relu = nn.ReLU(inplace=True)
+            self.conv = nn.Conv2d(in_channels, k, kernel_size=3, stride=1, padding=1)
+        else:
+            self.bn1 = nn.BatchNorm2d(in_channels)
+            self.relu = nn.ReLU(inplace=True)
+            self.conv1 = nn.Conv2d(in_channels, 4*k, kernel_size=1, stride=1, padding=0)
+            self.bn2 = nn.BatchNorm2d(4*k)
+            self.conv2 = nn.Conv2d(4*k, k, kernel_size=3, stride=1, padding=1)
+            pass
+    
+    def forward(self, x):
+        if not self.B_mode:
+            out = self.bn(x)
+            out = self.relu(out)
+            out = self.conv(out)
+            out = torch.cat((x, out), dim=1)
+        else:
+            out = self.bn1(x)
+            out = self.relu(out)
+            out = self.conv1(out)
+            out = self.bn2(out)
+            out = self.relu(out)
+            out = self.conv2(out)
+            out = torch.cat((x, out), dim=1)
+
+        return out
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     # here main function starts.

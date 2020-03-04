@@ -3,8 +3,6 @@ __pycache__/*
 
 # ignore data files
 data/*
-temp/*
-source/__pycache__/*
 
 # ignore virtualenv file
 venv/*
