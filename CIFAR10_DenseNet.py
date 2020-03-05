@@ -15,13 +15,16 @@ DenseNet code 작성
 '''
 
 class DenseNet(nn.Module):
-    def __init__(self, growth_rate=12, layer_num=40, B_mode=False, C_mode=False, theta=0.5):
+    def __init__(self, growth_rate=12, layer_num=40, B_mode=False, C_mode=False, theta=0.5, P_block=False):
+        '''
+        growth_rate : k (in paper)
+        layer_num : layer number of entire network
+        B_mode : Bottle neck option (in paper)
+        C_mode : Compression option (in paper)
+        P_block : building block in PyramidalNet
+        '''
         super(DenseNet, self).__init__()
         self.k = growth_rate
-        self.L = layer_num
-        self.B_mode = B_mode
-        self.C_mode = C_mode
-        self.theta = theta
 
         # dafault setting : 3 dense block
         if (B_mode and (layer_num-4)%6 != 0) or ((not B_mode) and (layer_num-4)%3 != 0):
@@ -32,22 +35,29 @@ class DenseNet(nn.Module):
         self.init_conv = nn.Conv2d(3, 2*self.k, kernel_size=3, stride=1, padding=0)
 
         block_in1 = 2*self.k
-        self.block1 = DenseBlock(block_in1, block_layer_num, self.k, B_mode=self.B_mode)
+        self.block1 = DenseBlock(block_in1, block_layer_num, self.k, B_mode=B_mode, P_block=P_block)
         block_out2 = block_in1 + block_layer_num * self.k
 
-        self.transition1 = TransitionLayer(block_out2, C_mode=self.C_mode, theta=self.theta)
+        self.transition1 = TransitionLayer(block_out2, C_mode=C_mode, theta=theta)
 
         block_in = int(theta*block_out2) if C_mode else block_out2
-        self.block2 = DenseBlock(block_in, block_layer_num, self.k, B_mode=self.B_mode)
+        self.block2 = DenseBlock(block_in, block_layer_num, self.k, B_mode=B_mode, P_block=P_block)
         block_out = block_in + block_layer_num * self.k
 
-        self.transition2 = TransitionLayer(block_out, C_mode=self.C_mode, theta=self.theta)
+        self.transition2 = TransitionLayer(block_out, C_mode=C_mode, theta=theta)
 
         block_in = int(theta*block_out) if C_mode else block_out
-        self.block3 = DenseBlock(block_in, block_layer_num, self.k, B_mode=self.B_mode)
+        self.block3 = DenseBlock(block_in, block_layer_num, self.k, B_mode=B_mode, P_block=P_block)
         block_out = block_in + block_layer_num * self.k
 
         self.FNN = nn.Linear(block_out, 10)
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
         conv_out = self.init_conv(x)
@@ -84,61 +94,77 @@ class TransitionLayer(nn.Module):
         return out
 
 class DenseBlock(nn.Sequential):
-    def __init__(self, in_channels, layer_num, k, B_mode):
+    def __init__(self, in_channels, layer_num, k, B_mode, P_block):
         super(DenseBlock, self).__init__()
         self.layer_num = layer_num if B_mode else 2*layer_num
 
         for i in range(layer_num):
             in_t = in_channels + k*i
-            self.add_module('bottle_neck_%d'%i, BottleNeck(in_t, k, B_mode))
+            self.add_module('bottle_neck_%d'%i, BottleNeck(in_t, k, B_mode, P_block))
 
 class BottleNeck(nn.Module):
-    def __init__(self, in_channels, k, B_mode):
+    def __init__(self, in_channels, k, B_mode, P_block):
         super(BottleNeck, self).__init__()
         self.B_mode = B_mode
+        self.P_block = P_block
 
         if not B_mode:
-            self.bn = nn.BatchNorm2d(in_channels)
-            self.relu = nn.ReLU(inplace=True)
-            self.conv = nn.Conv2d(in_channels, k, kernel_size=3, stride=1, padding=1)
+            if not self.P_block:
+                self.bn = nn.BatchNorm2d(in_channels)
+                self.relu = nn.ReLU(inplace=True)
+                self.conv = nn.Conv2d(in_channels, k, kernel_size=3, stride=1, padding=1)
+            else:
+                self.bn1 = nn.BatchNorm2d(in_channels)
+                self.relu = nn.ReLU(inplace=True)
+                self.conv = nn.Conv2d(in_channels, k, kernel_size=3, stride=1, padding=1)
+                self.bn2 = nn.BatchNorm2d(k)
         else:
-            self.bn1 = nn.BatchNorm2d(in_channels)
-            self.relu = nn.ReLU(inplace=True)
-            self.conv1 = nn.Conv2d(in_channels, 4*k, kernel_size=1, stride=1, padding=0)
-            self.bn2 = nn.BatchNorm2d(4*k)
-            self.conv2 = nn.Conv2d(4*k, k, kernel_size=3, stride=1, padding=1)
-            pass
+            if not self.P_block:
+                self.bn1 = nn.BatchNorm2d(in_channels)
+                self.relu = nn.ReLU(inplace=True)
+                self.conv1 = nn.Conv2d(in_channels, 4*k, kernel_size=1, stride=1, padding=0)
+                self.bn2 = nn.BatchNorm2d(4*k)
+                self.conv2 = nn.Conv2d(4*k, k, kernel_size=3, stride=1, padding=1)
+            else:
+                self.bn1 = nn.BatchNorm2d(in_channels)
+                self.relu = nn.ReLU(inplace=True)
+                self.conv1 = nn.Conv2d(in_channels, 4*k, kernel_size=1, stride=1, padding=0)
+                self.bn2 = nn.BatchNorm2d(4*k)
+                self.conv2 = nn.Conv2d(4*k, k, kernel_size=3, stride=1, padding=1)
+                self.bn3 = nn.BatchNorm2d(k)
     
     def forward(self, x):
         if not self.B_mode:
-            out = self.bn(x)
-            out = self.relu(out)
-            out = self.conv(out)
-            out = torch.cat((x, out), dim=1)
+            if not self.P_block:
+                out = self.bn(x)
+                out = self.relu(out)
+                out = self.conv(out)
+                out = torch.cat((x, out), dim=1)
+            else:
+                out = self.bn1(x)
+                out = self.relu(out)
+                out = self.conv(out)
+                out = self.bn2(x)
+                out = torch.cat((x, out), dim=1)
         else:
-            out = self.bn1(x)
-            out = self.relu(out)
-            out = self.conv1(out)
-            out = self.bn2(out)
-            out = self.relu(out)
-            out = self.conv2(out)
-            out = torch.cat((x, out), dim=1)
+            if not self.P_block:
+                out = self.bn1(x)
+                out = self.relu(out)
+                out = self.conv1(out)
+                out = self.bn2(out)
+                out = self.relu(out)
+                out = self.conv2(out)
+                out = torch.cat((x, out), dim=1)
+            else:
+                out = self.bn1(x)
+                out = self.conv1(out)
+                out = self.bn2(out)
+                out = self.relu(out)
+                out = self.conv2(out)
+                out = self.bn3(out)
+                out = torch.cat((x, out), dim=1)
 
         return out
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
 
 if __name__ == '__main__':
     # here main function starts.

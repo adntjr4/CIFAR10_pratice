@@ -1,47 +1,28 @@
-# Pytorch practice through CIFAR-10 data set
+# Pytorch practice using CIFAR-10 data set
 
-## Reference papers and blogs and others
+## Reference papers, blogs and others
 
-\> ResNet
+### __ResNet__  
 Deep Residual Learning for Image Recognition  
+https://dnddnjs.github.io/cifar10/2018/10/09/resnet/  
 
-\> DenseNet  
+### __DenseNet__  
 Densely Connected Convolutional Networks  
-https://sike6054.github.io/blog/paper/sixth-post/
 
-\> PyramidNet  
+### __PyramidNet__  
+Deep Pyramidal Residual Networks
 
-\> Mixup
+### __Mixup__  
+Bag of Tricks for Image Classification with Convolutional Neural Networks  
+https://github.com/facebookresearch/mixup-cifar10/blob/master/train.py  
 
 ## Result
 
----
-
-### __[ Default CNN ]__  
-
-__Default CNN 2-layer__  
-Accuracy : 53% (2 epoch)  
-Accuracy : 62% (5 epoch)  
-Accuracy : 63% (10 epoch)  
-Accuracy : 62% (2 epoch with batch normalization)  
-__Default CNN 3-layer__  
-Accuracy : 54%  (2 epoch)  
-Accuracy : 69% (5 epoch)  
-Accuracy : 70% (10 epoch)  
-
-### __[ ResNet ]__  
-
-__ResNet-32__  
-Accuracy : 91.8% ( with data augmentation, 80 epoch, 128 mini-batch, learning schedular )
-
-### __[ DenseNet ]__  
-
-__DenseNet (k=12, L=40)__  
-Error : 8.68% (lr=0.01, 80 epoch) ( 5.24% in paper )  
-
-__DenseNet-BC (k=12, L=100)__  
-Error : 5.57% ( 4.51% in paper )  
-
-
-
-
+| Model                   | Error(%) |                                          |
+|-------------------------|:--------:|------------------------------------------|
+| DenseNet-BC(k=12,L=100) |   4.65   | 300 epoch, w/ mixup                      |
+| DenseNet-BC(k=12,L=100) |   6.04   | 100 epoch, w/ PyramidalNet residual unit |
+| DenseNet-BC(k=12,L=100) |   5.57   | 300 epoch                                |
+| DenseNet(k=12, L=40)    |   8.68   | 80 epoch                                 |
+| ResNet-32               |   8.20   | 80 epoch                                 |
+| default-CNN             |   > 30   |                                          |

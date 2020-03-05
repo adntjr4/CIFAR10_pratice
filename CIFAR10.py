@@ -6,6 +6,8 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
+from torch.autograd import Variable
+import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -26,7 +28,7 @@ CIFAR-10 데이터 셋을 다루고 다른 Net을 호출하는 python file
 # default setting option
 model_dir = './model/'
 net_name = 'DenseNet'
-model_name = 'BC_k12_L100'
+model_name = 'BC_k12_L100_winit_mix'
 execute_train = True
 
 ## training option
@@ -36,7 +38,7 @@ initial_learning_rate = 0.1
 momentum = 0.9
 weight_decay = 1e-4
 
-save_epoch = 25
+save_epoch = 10
 
 # device
 device_idx = 1
@@ -44,12 +46,34 @@ DEVICE_LIST = ("cpu", "cuda:0")
 device = torch.device(DEVICE_LIST[device_idx] if torch.cuda.is_available() else "cpu")
 
 # net
-net = DenseNet(growth_rate=12, layer_num=100, B_mode=True, C_mode=True, theta=0.5)
-net.to(device)
+net = DenseNet(growth_rate=12, layer_num=100, B_mode=True, C_mode=True, theta=0.5, P_block=False)
+net.cuda()
+net = torch.nn.DataParallel(net)
+cudnn.benchmark = True
 num_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
-print(num_params)
+print('Number of parameters : %d' % num_params)
 
 # training
+
+# mixup from https://github.com/facebookresearch/mixup-cifar10/blob/master/train.py
+def mixup_data(x, y, alpha=1.0):
+    '''Returns mixed inputs, pairs of targets, and lambda'''
+    if alpha > 0:
+        lam = np.random.beta(alpha, alpha)
+    else:
+        lam = 1
+
+    batch_size = x.size()[0]
+
+    index = torch.randperm(batch_size).cuda()
+
+    mixed_x = lam * x + (1 - lam) * x[index, :]
+    y_a, y_b = y, y[index]
+    return mixed_x, y_a, y_b, lam
+
+def mixup_criterion(criterion, pred, y_a, y_b, lam):
+    return lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)
+
 
 #transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
@@ -96,10 +120,14 @@ def train(dataloader):
         for i, data in enumerate(dataloader, 0):
             inputs, labels = data[0].to(device), data[1].to(device)
 
+            inputs, labels_a, labels_b, lam = mixup_data(inputs, labels)
+            inputs, labels_a, labels_b = map(Variable, (inputs, labels_a, labels_b))
+
             optimizer.zero_grad()
 
             outputs = net(inputs)
-            loss = criterion(outputs, labels)
+            #loss = criterion(outputs, labels)
+            loss = mixup_criterion(criterion, outputs, labels_a, labels_b, lam)
 
             if not torch.isfinite(loss):
                 print('WARNING: non-finite loss, ending training ')
@@ -112,7 +140,8 @@ def train(dataloader):
 
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            #correct += (predicted == labels).sum().item()
+            correct += (lam * predicted.eq(labels_a.data).cpu().sum().float()+ (1 - lam) * predicted.eq(labels_b.data).cpu().sum().float())
 
             if time.time()-progress_time > 1:
                 progress_time = time.time()
