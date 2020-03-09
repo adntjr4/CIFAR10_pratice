@@ -18,11 +18,12 @@ https://github.com/facebookresearch/mixup-cifar10/blob/master/train.py
 
 ## Result
 
-| Model                   | Error(%) |                                          |
-|-------------------------|:--------:|------------------------------------------|
-| DenseNet-BC(k=12,L=100) |   4.65   | 300 epoch, w/ mixup                      |
-| DenseNet-BC(k=12,L=100) |   6.04   | 100 epoch, w/ PyramidalNet residual unit |
-| DenseNet-BC(k=12,L=100) |   5.57   | 300 epoch                                |
-| DenseNet(k=12, L=40)    |   8.68   | 80 epoch                                 |
-| ResNet-32               |   8.20   | 80 epoch                                 |
-| default-CNN             |   > 30   |                                          |
+| Model                    | Error(%) |                                          |
+|--------------------------|:--------:|------------------------------------------|
+| PyramidalNet(a=48,L=110) |   5.27   | 300 epoch, w/ (d) residual unit          |
+| DenseNet-BC(k=12,L=100)  |   4.65   | 300 epoch, w/ mixup                      |
+| DenseNet-BC(k=12,L=100)  |   6.04   | 100 epoch, w/ PyramidalNet residual unit |
+| DenseNet-BC(k=12,L=100)  |   5.57   | 300 epoch                                |
+| DenseNet(k=12, L=40)     |   8.68   | 80 epoch                                 |
+| ResNet-32                |   8.20   | 80 epoch                                 |
+| default-CNN              |   > 30   |                                          |
