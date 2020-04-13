@@ -22,6 +22,7 @@ from CIFAR10_CNN import CNNNet_2layer, CNNNet_3layer
 from CIFAR10_ResNet import ResNet
 from CIFAR10_DenseNet import DenseNet
 from CIFAR10_PyramidalNet import PyramidalNet
+from CIFAR10_MobileNet import MobileNet
 from util import *
 
 '''
@@ -30,10 +31,10 @@ CIFAR-10 데이터 셋을 다루고 다른 Net을 호출하는 python file
 
 # model option
 model_dir = './model/'
-model_name = 'a48_L110'
+model_name = '13block_mixup'
 
 #net = DenseNet(growth_rate=12, layer_num=100, B_mode=True, C_mode=True, theta=0.5, P_block=False)
-net = PyramidalNet()
+net = MobileNet()
 net_name = return_model_name(net)
 
 # training option

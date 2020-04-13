@@ -44,6 +44,7 @@ from CIFAR10_CNN import CNNNet_2layer, CNNNet_3layer
 from CIFAR10_ResNet import ResNet
 from CIFAR10_DenseNet import DenseNet
 from CIFAR10_PyramidalNet import PyramidalNet
+from CIFAR10_MobileNet import MobileNet
 
 def return_model_name(net):
     if isinstance(net, CNNNet_2layer) or isinstance(net, CNNNet_3layer):
@@ -54,6 +55,8 @@ def return_model_name(net):
         return 'DenseNet'
     elif isinstance(net, PyramidalNet):
         return 'PyramidalNet'
+    elif isinstance(net, MobileNet):
+        return 'MobileNet'
     else:
         raise Exception('Unknown network model instance')
 

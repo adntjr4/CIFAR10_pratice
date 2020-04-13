@@ -10,6 +10,9 @@ venv/*
 # ignore trained model file
 model/*
 
+# ignore paper pdf files
+paper/*
+
 # accept well trained one for exception
 #!model/name
 
