@@ -25,10 +25,9 @@ from CIFAR10_PyramidalNet import PyramidalNet
 from CIFAR10_MobileNet import MobileNet
 from CIFAR10_MobileNetV2 import MobileNetV2
 from util import *
-from mail import send_mail_myself_training
 
 '''
-CIFAR-10 데이터 셋을 다루고 다른 Net을 호출하는 python file
+Main python file training and evaluating models
 '''
 
 # model option
@@ -163,7 +162,6 @@ def train(dataloader):
         writer.add_scalar('log/train_error', 100.0-train_accuracy, epoch)
 
     elapsed_time = print_finish_training_msg(start_time)
-    send_mail_myself_training(net_name+'_'+model_name, 100.0-test_accuracy, elapsed_time)
     torch.save(net.state_dict(), model_dir + net_name + '_' + model_name)
 
 def test(dataloader):
