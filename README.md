@@ -24,15 +24,12 @@ https://dnddnjs.github.io/cifar10/2018/10/09/resnet/
 
 https://github.com/facebookresearch/mixup-cifar10/blob/master/train.py  
 
-### __ShakeNet__
-[Shake-Shake regularization](https://arxiv.org/pdf/1705.07485.pdf)
-
-http://research.sualab.com/practice/review/2018/06/28/shake-shake-regularization-review.html
-
 ## Result
 
 | Model                     | Error(%) | Params | Training time | Options                                  |
 |---------------------------|:--------:|:------:|:-------------:|------------------------------------------|
+| MobileNetV2               |   7.09   | 2.24 M |   03:58:39    | 300 epoch, w/ mixup                      |
+| MobileNetV2               |   7.49   | 2.24 M |   03:46:45    | 300 epoch                                |
 | MobileNet                 |   6.74   | 3.49 M |   02:43:13    | 300 epoch, w/ mixup                      |
 | MobileNet                 |   8.07   | 3.49 M |   02:43:01    | 300 epoch                                |
 | PyramidalNet (a=48,L=110) |   4.06   |        |               | 300 epoch, w/ mixup                      |
@@ -44,4 +41,4 @@ http://research.sualab.com/practice/review/2018/06/28/shake-shake-regularization
 | ResNet-32                 |   8.20   |        |               | 80 epoch                                 |
 | default-CNN               |   > 30   |        |               |                                          |
 
-#### note) All training was done by single RTX 2060 super with Ryzen 2600
+#### Note) All training was done by single RTX 2060 super with Ryzen 2600

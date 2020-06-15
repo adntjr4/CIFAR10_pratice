@@ -23,7 +23,9 @@ from CIFAR10_ResNet import ResNet
 from CIFAR10_DenseNet import DenseNet
 from CIFAR10_PyramidalNet import PyramidalNet
 from CIFAR10_MobileNet import MobileNet
+from CIFAR10_MobileNetV2 import MobileNetV2
 from util import *
+from mail import send_mail_myself_training
 
 '''
 CIFAR-10 데이터 셋을 다루고 다른 Net을 호출하는 python file
@@ -31,10 +33,10 @@ CIFAR-10 데이터 셋을 다루고 다른 Net을 호출하는 python file
 
 # model option
 model_dir = './model/'
-model_name = '13block_mixup'
+model_name = '17unit_mixup'
 
 #net = DenseNet(growth_rate=12, layer_num=100, B_mode=True, C_mode=True, theta=0.5, P_block=False)
-net = MobileNet()
+net = MobileNetV2()
 net_name = return_model_name(net)
 
 # training option
@@ -48,7 +50,7 @@ momentum = 0.9
 weight_decay = 1e-4
 
 model_save_epoch = 10
-mixup = False
+mixup = True
 
 # device
 device_idx = 1
@@ -149,7 +151,7 @@ def train(dataloader):
 
         txt = "[epoch : %d] train_error : %.2f %%, loss : %.4f \t\t\t\t\t" % (epoch+1, 100.0-train_accuracy, running_loss/batch_num)
         print(txt)
-        logfile.write(txt)
+        logfile.write((txt+'\n').replace('\t', ''))
 
         if (epoch+1) % model_save_epoch == 0:
             torch.save(net.state_dict(), model_dir + net_name + '_' + model_name + '(%depoch)'%(epoch+1))
@@ -157,10 +159,11 @@ def train(dataloader):
             writer.add_scalar('log/test_error', 100.0-test_accuracy, epoch)
             txt = "[epoch : %d] test_error : %.2f %% \t\t\t\t\t" % (epoch+1, 100.0-test_accuracy)
             print(txt)
-            logfile.write(txt)
+            logfile.write((txt+'\n').replace('\t', ''))
         writer.add_scalar('log/train_error', 100.0-train_accuracy, epoch)
 
-    print_finish_training_msg(start_time)
+    elapsed_time = print_finish_training_msg(start_time)
+    send_mail_myself_training(net_name+'_'+model_name, 100.0-test_accuracy, elapsed_time)
     torch.save(net.state_dict(), model_dir + net_name + '_' + model_name)
 
 def test(dataloader):
@@ -202,6 +205,6 @@ if __name__=='__main__':
     Accuracy = test(testloader)
     txt = 'Test error: %.2f %%\t\t\t' % (100.0-Accuracy)
     print(txt)
-    logfile.write(txt)
+    logfile.write((txt+'\n').replace('\t', ''))
 
 logfile.close()

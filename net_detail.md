@@ -24,3 +24,20 @@ Same form of MobileNet Body Architecture table for CIFAR-10 instead of ImageNet
 | FC / s1 | 512 x 10 | 1 x 1 x 512 |
 | Softmax / s1 | Classifier | 1 x 1 x 10 |
 
+## MobileNetV2
+
+Same form of MobileNetV2 Body Architecture table for CIFAR-10 instead of ImageNet
+
+| Input | Operator | t | c | n | s |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| 32 x 32 x 3 | conv2d | - | 32 | 1 | 1 |
+| 32 x 32 x 32 | bottleneck | 1 | 16 | 1 | 1 |
+| 32 x 32 x 16 | bottleneck | 6 | 24 | 2 | 2 |
+| 16 x 16 x 24 | bottleneck | 6 | 32 | 3 | 2 |
+| 8 x 8 x 32 | bottleneck | 6 | 64 | 4 | 2 |
+| 4 x 4 x 64 | bottleneck | 6 | 96 | 3 | 1 |
+| 4 x 4 x 96 | bottleneck | 6 | 160 | 3 | 2 |
+| 2 x 2 x 160 | bottleneck | 6 | 320 | 1 | 1 |
+| 2 x 2 x 320 | conv2d 1x1 | - | 1280 | 1 | 1 |
+| 2 x 2 x 1280 | avgpool 2x2 | - | - | 1 | - |
+| 1 x 1 x 1280 | conv2d 1x1 | - | k | - |  |

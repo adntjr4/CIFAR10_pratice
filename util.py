@@ -39,12 +39,14 @@ def print_finish_training_msg(start_time):
     total = time.time() - start_time
     total_str = str(datetime.timedelta(seconds=int(total)))
     print('Finished Training >>> (total elapsed time : %s) \t\t\t\t\t' % total_str)
+    return total
 
 from CIFAR10_CNN import CNNNet_2layer, CNNNet_3layer
 from CIFAR10_ResNet import ResNet
 from CIFAR10_DenseNet import DenseNet
 from CIFAR10_PyramidalNet import PyramidalNet
 from CIFAR10_MobileNet import MobileNet
+from CIFAR10_MobileNetV2 import MobileNetV2
 
 def return_model_name(net):
     if isinstance(net, CNNNet_2layer) or isinstance(net, CNNNet_3layer):
@@ -57,6 +59,7 @@ def return_model_name(net):
         return 'PyramidalNet'
     elif isinstance(net, MobileNet):
         return 'MobileNet'
+    elif isinstance(net, MobileNetV2):
+        return 'MobileNetV2'
     else:
         raise Exception('Unknown network model instance')
-
